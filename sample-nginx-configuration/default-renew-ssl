@@ -1,0 +1,64 @@
+server {
+        listen 80 default_server;
+        listen [::]:80 default_server ipv6only=on;
+
+        root /usr/share/nginx/html;
+        index index.html index.htm;
+
+        location /.well-known {
+                allow all;
+        }
+}
+
+server {
+        listen 443 ssl;
+
+        # Tag certificates
+        ssl_certificate /etc/letsencrypt/live/mydomain.co/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/mydomain.co/privkey.pem;
+
+        root /usr/share/nginx/html;
+        index index.html index.htm;
+
+		location /.well-known {
+			allow all;
+		}
+}
+
+server {
+        listen 5002 default_server;
+        listen [::]:5002 default_server ipv6only=on;
+
+        root /usr/share/nginx/html;
+        index index.html index.htm;
+
+        # Make site accessible from http://localhost/
+        server_name localhost;
+
+        # SSL Configs
+        ssl on;
+        ssl_certificate /etc/letsencrypt/live/mydomain.co/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/mydomain.co/privkey.pem;
+
+        location / {
+                if ($request_method = OPTIONS ) {
+                        add_header Access-Control-Allow-Origin "*";
+                        add_header Access-Control-Allow-Methods "GET, POST, OPTIONS";
+                        add_header Access-Control-Allow-Headers "Authorization";
+                        add_header Access-Control-Allow-Credentials "true";
+                        add_header Content-Length 0;
+                        add_header Content-Type text/plain;
+                        return 200;
+                }
+                auth_basic "Protected";
+                auth_basic_user_file /etc/nginx/.htpasswd;
+                proxy_pass http://localhost:5001;
+                proxy_redirect off;
+                #disables the verification of content-length
+                client_max_body_size 0;
+				#set the timeouts for the querys
+				proxy_send_timeout          600;
+				proxy_read_timeout          600;
+				send_timeout                600;
+        }
+}
